@@ -1,0 +1,194 @@
+﻿@model BeeperCalculator.Models.CalcViewModel
+
+@{
+    ViewBag.Title = "Home Page";
+}
+
+<div class="wrapper">
+    <div class="calc-wrapper">
+        @using (Html.BeginForm("Index", "Home", FormMethod.Post))
+        {
+
+            <div class="calc-row">
+                <textarea name="expression" id="calc-output" rows="1" placeholder="Введите выражение..."
+                          autofocus>@Model.Expression</textarea>
+            </div>
+
+            <div class="calc-flex-row">
+                <div class="calc-col">
+                    <button type="button" class="calc-btn-action btn-success">(</button>
+                </div>
+                <div class="calc-col">
+                    <button type="button" class="calc-btn-action btn-success">)</button>
+                </div>
+                <div class="calc-col">
+                    <button type="button" class="calc-btn-action btn-success">*</button>
+                </div>
+                <div class="calc-col">
+                    <button type="button" class="calc-btn-action btn-success">/</button>
+                </div>
+            </div>
+
+            <div class="calc-flex-row">
+                <div class="calc-col">
+                    <button type="button" class="calc-btn-digit">7</button>
+                </div>
+                <div class="calc-col">
+                    <button type="button" class="calc-btn-digit">8</button>
+                </div>
+                <div class="calc-col">
+                    <button type="button" class="calc-btn-digit">9</button>
+                </div>
+                <div class="calc-col">
+                    <button type="button" class="calc-btn-action btn-success" id="btn-clear">C</button>
+                </div>
+                
+            </div>
+
+            <div class="calc-flex-row">
+                <div class="calc-col">
+                    <button type="button" class="calc-btn-digit">4</button>
+                </div>
+                <div class="calc-col">
+                    <button type="button" class="calc-btn-digit">5</button>
+                </div>
+                <div class="calc-col">
+                    <button type="button" class="calc-btn-digit">6</button>
+                </div>
+                <div class="calc-col">
+                    <button type="button" class="calc-btn-action btn-success">-</button>
+                </div>
+            </div>
+
+            <div class="calc-flex-row">
+                <div class="calc-col">
+                    <button type="button" class="calc-btn-digit">1</button>
+                </div>
+                <div class="calc-col">
+                    <button type="button" class="calc-btn-digit">2</button>
+                </div>
+                <div class="calc-col">
+                    <button type="button" class="calc-btn-digit">3</button>
+                </div>
+                <div class="calc-col">
+                    <button type="button" class="calc-btn-action btn-success">+</button>
+                </div>
+            </div>
+            <div class="calc-flex-row">
+                <div class="calc-col">
+                    <button type="button" class="calc-btn-digit" disabled></button>
+                </div>
+                <div class="calc-col">
+                    <button type="button" class="calc-btn-digit">0</button>
+                </div>
+                <div class="calc-col">
+                    <button type="button" class="calc-btn-digit">.</button>
+                </div>
+                <div class="calc-col">
+                    <button type="submit" class="calc-btn-action btn-success" id="btn-calculate">=</button>
+                </div>
+            </div>
+            <div id="error-message">
+
+                @{ switch (@Model.CalcErrorCode)
+                    {
+                        case BeeperCalculator.Models.CalcErrorCode.DivideByZero:
+                            @:Деление на ноль
+                            break;
+                        case BeeperCalculator.Models.CalcErrorCode.ParseFailure:
+                            @:Неправильно введено выражение. Правила ввода:
+                            <ol>
+                                <li>
+                                    Отрицательные числа должны быть заключены в скобки: (-5), (-72)
+                                </li>
+                                <li>
+                                    Можно вводить цифры, точку, скобки и операторы +, -, /, *
+                                </li>
+                            </ol>
+                            break;
+                        default:
+                            break;
+
+                            if (Model.DataErrorCodes.Count > 0)
+                            {
+                                @Model.DataErrorCodes.Count
+                                foreach (var error in Model.DataErrorCodes)
+                                {
+                                    @error
+                                }
+                            }
+
+                    }}
+
+
+            </div>
+
+                    }
+    </div>
+
+    <div class="history-wrapper">
+        <div class="title">
+            История за сегодня
+        </div>
+        <ul>
+            @foreach (var expression in Model.Expressions)
+            {
+                <li class="history-expression">@expression.ExpressionString</li>
+            }
+        </ul>
+    </div>
+</div>
+
+@section scripts {
+    <script>
+        var output_textarea = $("#calc-output");
+        var displayingError = false;
+        moveOutputFocusToTheEnd();
+        $("button").not("#btn-calculate, #btn-clear").mousedown(function () {
+            var caret_pos = output_textarea[0].selectionStart;
+            var output_textarea_text = output_textarea.val();
+            if (output_textarea.is(":focus")) {
+                output_textarea.val(output_textarea_text.substring(0, caret_pos) + $(this)[0].innerHTML + output_textarea_text.substring(caret_pos))
+                output_textarea[0].setSelectionRange(caret_pos + 1, caret_pos + 1)
+            } else {
+                console.log($(this)[0].innerHTML)
+                output_textarea[0].value += $(this)[0].innerHTML
+            }
+            resetOutputColor();
+            return false;
+        })
+
+        $("#btn-clear").click(function () {
+            output_textarea[0].value = ""
+            moveOutputFocusToTheEnd();
+        })
+
+        output_textarea.bind("input", function () {
+            resetOutputColor(); 
+        })
+
+        $(".history-expression").click(function () {
+            output_textarea.val($(this)[0].innerHTML);
+        })
+
+        function resetOutputColor() {
+            output_textarea.css("background-color", "white")
+        }
+
+        output_textarea.focusout(moveOutputFocusToTheEnd)
+
+        function moveOutputFocusToTheEnd() {
+            output_textarea[0].selectionStart = output_textarea.val().length;
+            output_textarea[0].selectionEnd = output_textarea.val().length;
+        }
+
+        @if (!(Model.CalcErrorCode == BeeperCalculator.Models.CalcErrorCode.Success ||
+            Model.CalcErrorCode == BeeperCalculator.Models.CalcErrorCode.None) || Model.DataErrorCodes.Count > 0)
+        {
+            @:console.log(@Model.DataErrorCodes.Count)
+            @:output_textarea.css("background-color", "rgba(255, 0, 0, 0.1)")
+            @:output_textarea.tooltip();
+            @:$("#error-message").toggle("slow")
+        }
+    </script>
+}
